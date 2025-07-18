@@ -1,0 +1,102 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stm32bridge"
+version = "1.0.0"
+authors = [
+    {name = "STM32Bridge Team", email = "dev@stm32bridge.com"},
+]
+description = "STM32CubeMX to PlatformIO Migration Tool"
+readme = "README.md"
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Embedded Systems",
+    "Topic :: Software Development :: Code Generators",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Environment :: Console",
+]
+keywords = [
+    "stm32", "cubemx", "platformio", "embedded", "migration", 
+    "freertos", "arm", "cortex", "microcontroller", "iot"
+]
+dependencies = [
+    "typer>=0.9.0",
+    "rich>=13.0.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=6.0",
+    "black>=22.0",
+    "flake8>=4.0",
+    "mypy>=0.900",
+]
+build = [
+    "GitPython>=3.1.0",  # For some FreeRTOS libraries
+]
+
+[project.urls]
+Homepage = "https://github.com/yourusername/stm32bridge"
+"Bug Reports" = "https://github.com/yourusername/stm32bridge/issues"
+"Source Code" = "https://github.com/yourusername/stm32bridge"
+Documentation = "https://github.com/yourusername/stm32bridge/blob/main/README.md"
+
+[project.scripts]
+stm32bridge = "stm32bridge.main:app"
+
+[tool.setuptools]
+packages = ["stm32bridge", "stm32bridge.core", "stm32bridge.utils", "stm32bridge.cli"]
+
+[tool.setuptools.package-data]
+stm32bridge = ["*.py", "**/*.py"]
+
+[tool.black]
+line-length = 100
+target-version = ['py38']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  # directories
+  \.eggs
+  | \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | build
+  | dist
+)/
+'''
+
+[tool.mypy]
+python_version = "3.8"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+addopts = "-v --tb=short"
+
+[tool.flake8]
+max-line-length = 100
+extend-ignore = ["E203", "W503"]
+exclude = [
+    ".git",
+    "__pycache__",
+    "dist",
+    "build",
+    "*.egg-info",
+]

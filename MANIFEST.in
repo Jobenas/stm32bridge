@@ -1,0 +1,23 @@
+include README.md
+include LICENSE
+include MANIFEST.in
+include pyproject.toml
+include setup.py
+
+# Include all Python files in the package
+recursive-include stm32bridge *.py
+
+# Include package data
+recursive-include stm32bridge *.json
+recursive-include stm32bridge *.txt
+recursive-include stm32bridge *.md
+
+# Exclude unwanted files
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.orig
+global-exclude *.rej
+global-exclude *~
+global-exclude __pycache__
+global-exclude .git*
+global-exclude .DS_Store
