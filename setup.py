@@ -62,6 +62,8 @@ setup(
     install_requires=[
         "typer>=0.9.0",
         "rich>=13.0.0",
+        "requests>=2.28.0",
+        "beautifulsoup4>=4.11.0",
         "pathlib2>=2.3.0; python_version<'3.4'",
     ],
     extras_require={
@@ -73,6 +75,10 @@ setup(
         ],
         "build": [
             "GitPython>=3.1.0",  # For some FreeRTOS libraries
+        ],
+        "pdf": [
+            "PyPDF2>=3.0.0",
+            "pdfplumber>=0.7.0",
         ],
     },
     entry_points={

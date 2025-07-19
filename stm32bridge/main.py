@@ -8,6 +8,7 @@ Main entry point for the CLI application.
 import typer
 
 from stm32bridge.cli import migrate_command, analyze_command, list_boards_command
+from stm32bridge.cli.generate_board import generate_board
 
 app = typer.Typer(
     name="stm32bridge",
@@ -19,6 +20,7 @@ app = typer.Typer(
 app.command("migrate", help="Migrate STM32CubeMX project to PlatformIO.")(migrate_command)
 app.command("analyze", help="Analyze STM32CubeMX project and show configuration details.")(analyze_command)
 app.command("list-boards", help="List common STM32 board mappings for PlatformIO.")(list_boards_command)
+app.command("generate-board", help="Generate custom PlatformIO board file from STM32 product URL.")(generate_board)
 
 
 if __name__ == "__main__":
