@@ -82,9 +82,29 @@ Once you have a test project:
 # Test analysis
 stm32bridge analyze my_test_project
 
-# Test migration  
+# Test migration with standard board
 stm32bridge migrate my_test_project my_platformio_project --board nucleo_l432kc
+
+# Test migration with custom board file
+stm32bridge migrate my_test_project my_platformio_project --board custom_l432kcu6 --board-file ./custom_l432kcu6.json
 
 # Test with build verification
 stm32bridge migrate my_test_project my_platformio_project --board nucleo_l432kc --build
 ```
+
+### Using Custom Board Files
+
+When you have a custom board JSON file (e.g., generated with `stm32bridge generate-board`), you can use it directly during migration:
+
+```bash
+# Generate a custom board first
+stm32bridge generate-board my_custom_board --source "https://mouser.com/..."
+
+# Use the custom board during migration
+stm32bridge migrate my_cubemx_project my_pio_project --board my_custom_board --board-file ./my_custom_board.json
+```
+
+The `--board-file` parameter will automatically:
+- Copy the JSON file to the correct `boards/` directory in your PlatformIO project
+- Update the `platformio.ini` to use your custom board
+- No manual file copying required!

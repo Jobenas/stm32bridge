@@ -2,6 +2,7 @@
 Main CLI application and commands.
 """
 
+import json
 import shutil
 from pathlib import Path
 from typing import Optional
@@ -28,6 +29,7 @@ def migrate_command(
     source: str = typer.Argument(..., help="Path to STM32CubeMX project directory"),
     output: str = typer.Argument(..., help="Path for output PlatformIO project"),
     board: Optional[str] = typer.Option(None, "--board", "-b", help="Board name (existing PlatformIO board or custom board name)"),
+    board_file: Optional[str] = typer.Option(None, "--board-file", help="Path to custom board JSON file to copy to project"),
     board_source: Optional[str] = typer.Option(None, "--board-source", help="Source for custom board: URL, PDF file path, or board.json file path"),
     build: bool = typer.Option(False, "--build", help="Build and verify project after migration"),
     open_editor: bool = typer.Option(False, "--open", "-o", help="Open project in code editor after successful migration"),
@@ -95,9 +97,38 @@ def migrate_command(
         
         console.print(table)
         
-        # Step 2: Handle custom board generation from source
+        # Step 2: Handle custom board generation/detection
         board_config = None
-        if board_source:
+        custom_board_file = None
+        custom_board_file_to_copy = None
+        
+        # First, check if board_file is provided for copying existing custom board
+        if board_file:
+            if not board:
+                console.print("[red]--board is required when using --board-file[/red]")
+                raise typer.Exit(1)
+            
+            board_file_path = Path(board_file)
+            if not board_file_path.exists():
+                console.print(f"[red]Board file not found: {board_file}[/red]")
+                raise typer.Exit(1)
+            
+            if not _is_custom_board_file(board_file_path):
+                console.print(f"[red]Invalid board file format: {board_file}[/red]")
+                raise typer.Exit(1)
+            
+            try:
+                with open(board_file_path, 'r') as f:
+                    board_config = json.load(f)
+                custom_board_file_to_copy = board_file_path
+                console.print(f"[green]✅ Custom board file '{board_file}' will be copied to project[/green]")
+                
+            except Exception as e:
+                console.print(f"[red]Failed to load board file: {e}[/red]")
+                raise typer.Exit(1)
+        
+        # Second, check if board_source is provided for generating new custom board
+        elif board_source:
             if not board:
                 console.print("[red]--board is required when using --board-source[/red]")
                 raise typer.Exit(1)
@@ -110,17 +141,51 @@ def migrate_command(
                 console.print(f"[red]Failed to generate board from source: {e}[/red]")
                 raise typer.Exit(1)
         
+        # Third, check if we're using a custom board that already exists
+        elif board and not _is_builtin_board(board):
+            custom_board_file = _find_custom_board_file(board)
+            if custom_board_file:
+                console.print(f"[blue]📋 Found custom board file: {custom_board_file}[/blue]")
+                try:
+                    with open(custom_board_file, 'r', encoding='utf-8') as f:
+                        board_config = json.load(f)
+                    console.print(f"[green]✅ Custom board '{board}' configuration loaded[/green]")
+                except Exception as e:
+                    console.print(f"[yellow]⚠️  Could not load custom board file: {e}[/yellow]")
+                    console.print(f"[yellow]Proceeding with standard board '{board}'[/yellow]")
+            else:
+                console.print(f"[yellow]⚠️  Custom board '{board}' not found. Proceeding as standard board.[/yellow]")
+                console.print(f"[yellow]If this should be a custom board, use --board-source to generate it.[/yellow]")
+        
         # Step 3: Determine board name (if not using custom board)
         if not board:
             mcu_name = project_info.get('mcu_name', project_info.get('mcu_target', ''))
             board = detect_board_name(mcu_name)
             
             if board.startswith('generic'):
-                board = Prompt.ask(
-                    "Enter PlatformIO board name", 
-                    default=board,
-                    show_default=True
-                )
+                # Automatically check for custom boards in current directory
+                detected_custom_board = None
+                current_dir = Path.cwd()
+                
+                # Look for custom board files in the current directory
+                for json_file in current_dir.glob("*.json"):
+                    if _is_custom_board_file(json_file):
+                        board_name = json_file.stem
+                        console.print(f"[blue]🔍 Auto-detected custom board: {board_name}[/blue]")
+                        detected_custom_board = board_name
+                        # Store the source file path for later copying
+                        custom_board_source_file = json_file
+                        break
+                
+                if detected_custom_board:
+                    board = detected_custom_board
+                    console.print(f"[green]✅ Using auto-detected custom board: {board}[/green]")
+                else:
+                    board = Prompt.ask(
+                        "Enter PlatformIO board name", 
+                        default=board,
+                        show_default=True
+                    )
         
         progress.update(task, advance=10, description="Setting up PlatformIO project...")
         
@@ -134,12 +199,29 @@ def migrate_command(
             generator.create_project_structure()
             generator.write_platformio_ini(board)
             
-            # Add custom board file if generated from source
-            if board_source and board_config:
-                console.print(f"[blue]Adding custom board to project...[/blue]")
+            # Add custom board file if generated, found locally, copied, or auto-detected
+            if (board_source and board_config) or (custom_board_file and board_config) or (custom_board_file_to_copy and board_config):
+                console.print(f"[blue]📋 Adding custom board to project...[/blue]")
                 from ..utils.board_generator import BoardFileGenerator
                 board_generator = BoardFileGenerator()
                 board_generator.create_boards_dir_structure(output_path, board, board_config)
+                if custom_board_file_to_copy:
+                    console.print(f"[green]✅ Custom board '{board}' copied from '{custom_board_file_to_copy}' and integrated into PlatformIO project[/green]")
+                else:
+                    console.print(f"[green]✅ Custom board '{board}' integrated into PlatformIO project[/green]")
+            elif 'custom_board_source_file' in locals():
+                # Handle auto-detected custom board file
+                console.print(f"[blue]📋 Adding auto-detected custom board to project...[/blue]")
+                try:
+                    with open(custom_board_source_file, 'r') as f:
+                        auto_detected_board_config = json.load(f)
+                    
+                    from ..utils.board_generator import BoardFileGenerator
+                    board_generator = BoardFileGenerator()
+                    board_generator.create_boards_dir_structure(output_path, board, auto_detected_board_config)
+                    console.print(f"[green]✅ Auto-detected custom board '{board}' integrated into PlatformIO project[/green]")
+                except Exception as e:
+                    console.print(f"[yellow]⚠️  Could not integrate auto-detected custom board: {e}[/yellow]")
             
             progress.update(task, advance=30, description="Migrating files...")
             
@@ -162,11 +244,16 @@ def migrate_command(
     console.print(f"[green]✅ Migration completed successfully![/green]")
     console.print(f"[blue]Output directory: {output_path}[/blue]")
     
-    # Important note about HAL configuration
+    # Important note about HAL configuration and custom boards
     console.print("\n[yellow]⚠️  Important Notes:[/yellow]")
     console.print("• PlatformIO uses framework HAL drivers (not the copied CubeMX ones)")
     console.print("• Your HAL configuration (stm32l4xx_hal_conf.h) has been preserved")
     console.print("• If you have custom HAL modifications, you may need to adjust them")
+    
+    if board_config or 'custom_board_source_file' in locals() or custom_board_file_to_copy:
+        console.print(f"• Custom board '{board}' has been integrated into the project")
+        console.print("• Board configuration is available in boards/ directory")
+        console.print("• PlatformIO will automatically use the custom board definition")
     
     if project_info.get('uses_freertos', False):
         if no_freertos:
@@ -251,7 +338,6 @@ def _generate_custom_board_from_source(board_name: str, source: str) -> dict:
         if source_path.suffix.lower() == '.json':
             # Existing board.json file
             console.print(f"[blue]📄 Loading existing board file: {source}[/blue]")
-            import json
             with open(source_path, 'r', encoding='utf-8') as f:
                 board_config = json.load(f)
             console.print(f"[green]✅ Loaded existing board configuration[/green]")
@@ -283,3 +369,86 @@ def _generate_custom_board_from_source(board_name: str, source: str) -> dict:
             raise STM32MigrationError(f"Unsupported file type: {source_path.suffix}")
     else:
         raise STM32MigrationError(f"Source not found: {source}")
+
+
+def _is_custom_board_file(file_path: Path) -> bool:
+    """
+    Check if a JSON file is likely a custom board file.
+    
+    Args:
+        file_path: Path to the JSON file
+        
+    Returns:
+        True if the file appears to be a custom board file
+    """
+    try:
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        
+        # Check for typical board file structure
+        required_keys = ['name', 'build', 'upload', 'frameworks']
+        has_required_keys = all(key in data for key in required_keys)
+        
+        # Check for board-specific build properties
+        has_build_props = isinstance(data.get('build'), dict) and \
+                         any(key in data['build'] for key in ['mcu', 'f_cpu', 'variant'])
+        
+        return has_required_keys and has_build_props
+    except (json.JSONDecodeError, IOError):
+        return False
+
+
+def _is_builtin_board(board_name: str) -> bool:
+    """
+    Check if a board name is a built-in PlatformIO board.
+    
+    This is a simple heuristic - built-in boards typically don't contain custom prefixes.
+    We consider boards with 'custom' prefix or certain patterns as custom boards.
+    """
+    if not board_name:
+        return True
+        
+    # Simple heuristics for detecting custom boards
+    custom_indicators = [
+        'custom_',
+        '_custom',
+        'diy_',
+        'local_',
+        'generated_',
+    ]
+    
+    for indicator in custom_indicators:
+        if indicator in board_name.lower():
+            return False
+    
+    # Additional check - if board name ends with a specific MCU part number pattern
+    import re
+    if re.match(r'.*stm32[a-z]\d+[a-z]*\d*', board_name.lower()):
+        return False
+    
+    return True
+
+
+def _find_custom_board_file(board_name: str) -> Optional[Path]:
+    """
+    Find a custom board file in common locations.
+    
+    Searches in:
+    1. Current directory: {board_name}.json
+    2. boards/ subdirectory: boards/{board_name}.json  
+    3. Current directory with 'board' suffix: {board_name}_board.json
+    """
+    from pathlib import Path
+    
+    possible_locations = [
+        Path(f"{board_name}.json"),
+        Path("boards") / f"{board_name}.json",
+        Path(f"{board_name}_board.json"),
+        Path("boards") / f"{board_name}_board.json",
+    ]
+    
+    for location in possible_locations:
+        if location.exists() and location.is_file():
+            return location
+    
+    return None
