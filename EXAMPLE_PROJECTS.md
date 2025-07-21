@@ -90,6 +90,9 @@ stm32bridge migrate my_test_project my_platformio_project --board custom_l432kcu
 
 # Test with build verification
 stm32bridge migrate my_test_project my_platformio_project --board nucleo_l432kc --build
+
+# Test with build verification and auto-open in VS Code
+stm32bridge migrate my_test_project my_platformio_project --board nucleo_l432kc --build --open
 ```
 
 ### Using Custom Board Files
@@ -102,9 +105,17 @@ stm32bridge generate-board my_custom_board --source "https://mouser.com/..."
 
 # Use the custom board during migration
 stm32bridge migrate my_cubemx_project my_pio_project --board my_custom_board --board-file ./my_custom_board.json
+
+# Complete workflow with build verification and editor opening
+stm32bridge migrate my_cubemx_project my_pio_project --board my_custom_board --board-file ./my_custom_board.json --build --open
 ```
 
 The `--board-file` parameter will automatically:
 - Copy the JSON file to the correct `boards/` directory in your PlatformIO project
 - Update the `platformio.ini` to use your custom board
 - No manual file copying required!
+
+The `--open` option will:
+- Automatically detect VS Code installation on Windows
+- Open the migrated project in your preferred editor
+- Works even if VS Code is not in your system PATH
