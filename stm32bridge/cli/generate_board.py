@@ -6,6 +6,7 @@ from various sources including URLs, PDFs, manual input, and direct parameters.
 """
 
 import json
+import re
 import typer
 from pathlib import Path
 from typing import Optional
@@ -132,6 +133,7 @@ def generate_board(
             else:
                 # Save to specified output directory or current directory
                 output_dir = output or Path.cwd()
+                output_dir.mkdir(parents=True, exist_ok=True)  # Create directory if it doesn't exist
                 output_file = output_dir / f"{name}.json"
                 console.print(f"[green]📁 Saving to: {output_dir}[/green]")
             
@@ -265,9 +267,9 @@ def _load_from_json_file(progress: Progress, json_path: str) -> Optional[MCUSpec
             part_number=board_data.get('build', {}).get('mcu', 'Unknown'),
             family='STM32L4',  # Default family
             core=board_data.get('build', {}).get('cpu', 'cortex-m4'),
-            max_frequency=str(board_data.get('build', {}).get('f_cpu', 80000000) // 1000000),  # Convert to MHz string
-            flash_size_kb=board_data.get('upload', {}).get('maximum_size', 256000) // 1024,  # Convert to KB
-            ram_size_kb=board_data.get('upload', {}).get('maximum_ram_size', 64000) // 1024,  # Convert to KB
+            max_frequency=str(int(str(board_data.get('build', {}).get('f_cpu', 80000000)).replace('L', '')) // 1000000),  # Convert to MHz string
+            flash_size_kb=int(board_data.get('upload', {}).get('maximum_size', 256000)) // 1024,  # Convert to KB
+            ram_size_kb=int(board_data.get('upload', {}).get('maximum_ram_size', 64000)) // 1024,  # Convert to KB
             package='LQFP',  # Default package
             pin_count=64,  # Default pin count
             operating_voltage_min=board_data.get('build', {}).get('voltage_min', 1.8),
@@ -383,7 +385,7 @@ def _generate_from_manual_input(progress: Progress, board_name: str) -> Optional
 
 def _generate_from_parameters(
     progress: Progress,
-    part_number: str,
+    part_number: Optional[str],
     core: Optional[str],
     frequency: Optional[int],
     flash_kb: Optional[int],

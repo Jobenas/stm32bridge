@@ -4,7 +4,7 @@ STM32CubeMX to PlatformIO Migration Tool
 A comprehensive CLI utility to automate the migration of STM32CubeMX projects to PlatformIO.
 """
 
-__version__ = "1.2.0"
+__version__ = "1.2.2"
 __author__ = "STM32Bridge Team"
 __license__ = "MIT"
 

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stm32bridge"
-version = "1.2.0"
+version = "1.2.1"
 authors = [
     {name = "STM32Bridge Team", email = "dev@stm32bridge.com"},
 ]
@@ -43,6 +43,13 @@ dev = [
     "black>=22.0",
     "flake8>=4.0",
     "mypy>=0.900",
+]
+test = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0",
+    "responses>=0.23.0",
+    "factory-boy>=3.2.0",
 ]
 build = [
     "GitPython>=3.1.0",  # For some FreeRTOS libraries

@@ -99,7 +99,8 @@ def migrate_command(
         board_config = None
         if board_source:
             if not board:
-                raise typer.Exit("--board is required when using --board-source")
+                console.print("[red]--board is required when using --board-source[/red]")
+                raise typer.Exit(1)
             
             try:
                 board_config = _generate_custom_board_from_source(board, board_source)
@@ -266,7 +267,7 @@ def _generate_custom_board_from_source(board_name: str, source: str) -> dict:
                 from rich.progress import Progress, SpinnerColumn, TextColumn
                 
                 with Progress(SpinnerColumn(), TextColumn("[progress.description]{task.description}")) as progress:
-                    specs = _generate_from_pdf(progress, source_path)
+                    specs = _generate_from_pdf(progress, str(source_path))
                 
                 if not specs:
                     raise STM32MigrationError("Failed to extract MCU specifications from PDF")

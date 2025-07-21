@@ -68,10 +68,21 @@ setup(
     ],
     extras_require={
         "dev": [
-            "pytest>=6.0",
+            "pytest>=7.0.0",
+            "pytest-cov>=4.0.0",
+            "pytest-mock>=3.10.0",
+            "pytest-asyncio>=0.21.0",
             "black>=22.0",
             "flake8>=4.0",
             "mypy>=0.900",
+        ],
+        "test": [
+            "pytest>=7.0.0",
+            "pytest-cov>=4.0.0",
+            "pytest-mock>=3.10.0",
+            "pytest-asyncio>=0.21.0",
+            "responses>=0.23.0",  # For mocking HTTP requests
+            "factory-boy>=3.2.0",  # For test data factories
         ],
         "build": [
             "GitPython>=3.1.0",  # For some FreeRTOS libraries

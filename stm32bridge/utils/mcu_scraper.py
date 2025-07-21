@@ -210,10 +210,19 @@ class STM32Scraper:
         if not part_number:
             return "Unknown"
         
-        # Extract family from part number (e.g., STM32L432KC -> L4)
-        match = re.search(r'STM32([A-Z]\d)', part_number.upper())
+        # Extract family from part number (e.g., STM32L432KC -> L4, STM32WB55CG -> WB)
+        # Handle both single letter families (L4, F1) and multi-letter families (WB, MP)
+        match = re.search(r'STM32([A-Z]+)(\d+)', part_number.upper())
         if match:
-            return f"STM32{match.group(1)}"
+            letters = match.group(1)
+            first_digit = match.group(2)[0]
+            
+            # For single letter families like F, L, H, G - include first digit
+            if len(letters) == 1:
+                return f"STM32{letters}{first_digit}"
+            # For multi-letter families like WB, MP - just use letters
+            else:
+                return f"STM32{letters}"
         return "STM32"
     
     def _extract_core(self, soup: BeautifulSoup) -> str:
