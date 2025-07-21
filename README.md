@@ -18,6 +18,15 @@ pip install stm32bridge
 git clone https://github.com/yourusername/stm32bridge.git
 cd stm32bridge
 pip install -e .
+
+# For testing and development
+pip install -r requirements-dev.txt
+
+# Or install specific dependency groups
+pip install -e .[test]     # Testing dependencies
+pip install -e .[dev]      # Development tools  
+pip install -e .[pdf]      # PDF processing (optional)
+pip install -e .[build]    # Build tools
 ```
 
 ### From Local Wheel
@@ -86,8 +95,13 @@ cd stm32bridge
 # Install in development mode
 pip install -e .
 
-# Or install dependencies manually
-pip install typer rich pathlib
+# For development with all dependencies
+pip install -r requirements-dev.txt
+
+# Or install specific dependency groups  
+pip install -e .[test]     # Testing dependencies
+pip install -e .[dev]      # Development tools
+pip install -e .[pdf]      # PDF processing (optional)
 ```
 
 ## 📖 Usage

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stm32bridge"
-version = "1.2.1"
+version = "1.2.2"
 authors = [
     {name = "STM32Bridge Team", email = "dev@stm32bridge.com"},
 ]
@@ -48,6 +48,7 @@ test = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "pytest-mock>=3.10.0",
+    "pytest-asyncio>=0.21.0",
     "responses>=0.23.0",
     "factory-boy>=3.2.0",
 ]

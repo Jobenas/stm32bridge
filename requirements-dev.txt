@@ -1,0 +1,15 @@
+# STM32Bridge Development Dependencies
+# Install with: pip install -r requirements-dev.txt
+
+# Include core dependencies
+-r requirements.txt
+
+# Include test dependencies  
+-r requirements-test.txt
+
+# Additional development tools
+GitPython>=3.1.0
+
+# Optional PDF processing dependencies
+PyPDF2>=3.0.0
+pdfplumber>=0.7.0

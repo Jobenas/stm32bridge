@@ -1,0 +1,19 @@
+# STM32Bridge Test Dependencies
+# Install with: pip install -r requirements-test.txt
+
+# Core testing framework
+pytest>=7.0.0
+pytest-cov>=4.0.0
+pytest-mock>=3.10.0
+pytest-asyncio>=0.21.0
+
+# HTTP mocking for web scraping tests
+responses>=0.23.0
+
+# Test data factories
+factory-boy>=3.2.0
+
+# Code quality tools
+black>=22.0
+flake8>=4.0
+mypy>=0.900
