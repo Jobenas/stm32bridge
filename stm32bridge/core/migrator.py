@@ -155,6 +155,9 @@ class FileMigrator:
         # Copy middleware (FreeRTOS config, etc.)
         self.copy_middleware()
         
+        # Copy STM32CubeMX .ioc file for peripheral configuration preservation
+        self.copy_ioc_file()
+        
         # Handle Core/Src files
         self.migrate_core_files()
         
@@ -298,3 +301,25 @@ class FileMigrator:
                 # This is likely custom middleware or drivers
                 self.copy_directory_tree(f'Drivers/{item.name}', f'Drivers/{item.name}')
                 console.print(f"[green]Copied custom driver: {item.name}[/green]")
+    
+    def copy_ioc_file(self):
+        """Copy the .ioc file to preserve STM32CubeMX configuration."""
+        # Look for .ioc files in the source directory
+        ioc_files = list(self.source_path.glob('*.ioc'))
+        
+        if not ioc_files:
+            console.print(f"[yellow]No .ioc file found in {self.source_path}[/yellow]")
+            return
+        
+        if len(ioc_files) > 1:
+            console.print(f"[yellow]Multiple .ioc files found, copying the first one: {ioc_files[0].name}[/yellow]")
+        
+        ioc_file = ioc_files[0]
+        dest_file = self.dest_path / ioc_file.name
+        
+        try:
+            shutil.copy2(ioc_file, dest_file)
+            console.print(f"[green]✅ Copied {ioc_file.name} for peripheral configuration preservation[/green]")
+        except (OSError, PermissionError) as e:
+            console.print(f"[red]Error copying {ioc_file.name}: {e}[/red]")
+            raise FileOperationError(f"Failed to copy .ioc file: {e}")

@@ -50,54 +50,173 @@ class BoardFileGenerator:
     def _create_board_config(self, specs: MCUSpecs, board_name: str) -> Dict[str, Any]:
         """Create the board configuration dictionary."""
         
+        # Apply part-specific corrections
+        corrected_specs = self._apply_part_specific_corrections(specs)
+        
         # Base configuration
         config = {
             "build": {
                 "core": "stm32",
-                "cpu": self._map_core_to_cpu(specs.core),
-                "extra_flags": self._generate_build_flags(specs),
-                "f_cpu": specs.max_frequency,
+                "cpu": self._map_core_to_cpu(corrected_specs.core),
+                "extra_flags": self._generate_build_flags(corrected_specs),
+                "f_cpu": str(corrected_specs.max_frequency) + "L",
                 "hwids": [
                     ["0x0483", "0x374B"]  # Default STM32 VID/PID
                 ],
-                "mcu": specs.part_number.lower(),
-                "product_line": self._get_product_line(specs.part_number),
-                "variant": self._get_variant_name(specs.part_number)
+                "mcu": corrected_specs.part_number.lower(),
+                "product_line": self._get_product_line(corrected_specs.part_number),
+                "variant": self._get_variant_name(corrected_specs.part_number)
             },
             "debug": {
-                "jlink_device": specs.part_number,
-                "openocd_target": self._get_openocd_target(specs.family),
-                "svd_path": f"{specs.part_number}.svd"
+                "jlink_device": self._get_jlink_device(corrected_specs.part_number),
+                "openocd_target": self._get_openocd_target(corrected_specs.family),
+                "svd_path": f"{corrected_specs.part_number}.svd"
             },
-            "frameworks": ["arduino", "stm32cube"],
-            "name": f"{specs.part_number} ({specs.flash_size_kb}KB flash, {specs.ram_size_kb}KB RAM)",
+            "frameworks": ["stm32cube", "arduino"],
+            "name": f"{corrected_specs.part_number} ({corrected_specs.flash_size_kb}KB flash, {corrected_specs.ram_size_kb}KB RAM)",
             "upload": {
-                "maximum_ram_size": specs.ram_size_kb * 1024,
-                "maximum_size": specs.flash_size_kb * 1024,
+                "maximum_ram_size": corrected_specs.ram_size_kb * 1024,
+                "maximum_size": corrected_specs.flash_size_kb * 1024,
                 "protocol": "stlink",
-                "protocols": ["jlink", "stlink", "blackmagic", "mbed"]
+                "protocols": ["stlink", "jlink", "blackmagic", "mbed"]
             },
             "url": "https://www.st.com/en/microcontrollers-microprocessors.html",
             "vendor": "ST"
         }
         
         # Add connectivity features if available
-        if specs.peripherals.get('USB', 0) > 0:
+        if corrected_specs.peripherals.get('USB', 0) > 0:
             config["connectivity"] = config.get("connectivity", [])
             config["connectivity"].append("usb")
         
-        if specs.peripherals.get('CAN', 0) > 0:
+        if corrected_specs.peripherals.get('CAN', 0) > 0:
             config["connectivity"] = config.get("connectivity", [])
             config["connectivity"].append("can")
         
         # Add peripheral information as metadata
-        if specs.peripherals:
-            config["build"]["peripherals"] = specs.peripherals
+        if corrected_specs.peripherals:
+            config["build"]["peripherals"] = corrected_specs.peripherals
         
-        if specs.features:
-            config["build"]["features"] = specs.features
+        if corrected_specs.features:
+            config["build"]["features"] = corrected_specs.features
         
         return config
+    
+    def _apply_part_specific_corrections(self, specs: MCUSpecs) -> MCUSpecs:
+        """Apply known corrections for specific STM32 parts."""
+        part_number = specs.part_number.upper()
+        
+        # Create a copy with potential corrections
+        corrected_specs = specs
+        
+        # STM32L432KCU6 specific corrections
+        if part_number == "STM32L432KCU6":
+            console.print("[yellow]⚠️  Applying STM32L432KCU6-specific corrections[/yellow]")
+            
+            # Correct flash size: KCU6 variant has 256KB
+            # The 'C' in KCU6 indicates 256KB flash
+            if specs.flash_size_kb != 256:
+                console.print(f"[yellow]  • Correcting flash size: {specs.flash_size_kb}KB → 256KB[/yellow]")
+                corrected_specs = MCUSpecs(
+                    part_number=specs.part_number,
+                    family=specs.family,
+                    core=specs.core,
+                    max_frequency=specs.max_frequency,
+                    flash_size_kb=256,  # Corrected
+                    ram_size_kb=specs.ram_size_kb,
+                    package=specs.package,
+                    pin_count=specs.pin_count,
+                    operating_voltage_min=specs.operating_voltage_min,
+                    operating_voltage_max=specs.operating_voltage_max,
+                    temperature_min=specs.temperature_min,
+                    temperature_max=specs.temperature_max,
+                    peripherals=specs.peripherals,
+                    features=specs.features
+                )
+            
+            # Ensure RAM is correct (64KB for L432xx)
+            if corrected_specs.ram_size_kb != 64:
+                console.print(f"[yellow]  • Correcting RAM size: {corrected_specs.ram_size_kb}KB → 64KB[/yellow]")
+                corrected_specs = MCUSpecs(
+                    part_number=corrected_specs.part_number,
+                    family=corrected_specs.family,
+                    core=corrected_specs.core,
+                    max_frequency=corrected_specs.max_frequency,
+                    flash_size_kb=corrected_specs.flash_size_kb,
+                    ram_size_kb=64,  # Corrected
+                    package=corrected_specs.package,
+                    pin_count=corrected_specs.pin_count,
+                    operating_voltage_min=corrected_specs.operating_voltage_min,
+                    operating_voltage_max=corrected_specs.operating_voltage_max,
+                    temperature_min=corrected_specs.temperature_min,
+                    temperature_max=corrected_specs.temperature_max,
+                    peripherals=corrected_specs.peripherals,
+                    features=corrected_specs.features
+                )
+            
+            # Ensure max frequency is correct (80MHz for L432xx)
+            if corrected_specs.max_frequency != "80000000":
+                console.print(f"[yellow]  • Correcting max frequency: {corrected_specs.max_frequency}Hz → 80000000Hz[/yellow]")
+                corrected_specs = MCUSpecs(
+                    part_number=corrected_specs.part_number,
+                    family=corrected_specs.family,
+                    core=corrected_specs.core,
+                    max_frequency="80000000",  # Corrected
+                    flash_size_kb=corrected_specs.flash_size_kb,
+                    ram_size_kb=corrected_specs.ram_size_kb,
+                    package=corrected_specs.package,
+                    pin_count=corrected_specs.pin_count,
+                    operating_voltage_min=corrected_specs.operating_voltage_min,
+                    operating_voltage_max=corrected_specs.operating_voltage_max,
+                    temperature_min=corrected_specs.temperature_min,
+                    temperature_max=corrected_specs.temperature_max,
+                    peripherals=corrected_specs.peripherals,
+                    features=corrected_specs.features
+                )
+        
+        # STM32L432KC specific corrections (different flash size)
+        elif part_number == "STM32L432KC":
+            if specs.flash_size_kb != 256:
+                console.print(f"[yellow]  • Correcting flash size for KC variant: {specs.flash_size_kb}KB → 256KB[/yellow]")
+                corrected_specs = MCUSpecs(
+                    part_number=specs.part_number,
+                    family=specs.family,
+                    core=specs.core,
+                    max_frequency=specs.max_frequency,
+                    flash_size_kb=256,  # Corrected
+                    ram_size_kb=specs.ram_size_kb,
+                    package=specs.package,
+                    pin_count=specs.pin_count,
+                    operating_voltage_min=specs.operating_voltage_min,
+                    operating_voltage_max=specs.operating_voltage_max,
+                    temperature_min=specs.temperature_min,
+                    temperature_max=specs.temperature_max,
+                    peripherals=specs.peripherals,
+                    features=specs.features
+                )
+        
+        # STM32L432KB specific corrections
+        elif part_number == "STM32L432KB":
+            if specs.flash_size_kb != 128:
+                console.print(f"[yellow]  • Correcting flash size for KB variant: {specs.flash_size_kb}KB → 128KB[/yellow]")
+                corrected_specs = MCUSpecs(
+                    part_number=specs.part_number,
+                    family=specs.family,
+                    core=specs.core,
+                    max_frequency=specs.max_frequency,
+                    flash_size_kb=128,  # Corrected
+                    ram_size_kb=specs.ram_size_kb,
+                    package=specs.package,
+                    pin_count=specs.pin_count,
+                    operating_voltage_min=specs.operating_voltage_min,
+                    operating_voltage_max=specs.operating_voltage_max,
+                    temperature_min=specs.temperature_min,
+                    temperature_max=specs.temperature_max,
+                    peripherals=specs.peripherals,
+                    features=specs.features
+                )
+        
+        return corrected_specs
     
     def _map_core_to_cpu(self, core: str) -> str:
         """Map ARM core to PlatformIO CPU designation."""
@@ -123,17 +242,50 @@ class BoardFileGenerator:
         if family.startswith('STM32'):
             flags.append(f"-D{family}")
         
-        # Add HSE crystal frequency if available (default 8MHz for most STM32)
-        flags.append("-DHSE_VALUE=8000000")
+        # Add HSE crystal frequency with critical 'U' suffix for C preprocessor
+        # This is CRITICAL for proper HAL clock configuration
+        hse_value = self._get_hse_value_for_part(specs.part_number)
+        flags.append(f"-DHSE_VALUE={hse_value}U")
+        
+        # Add HAL driver flag
+        flags.append("-DUSE_HAL_DRIVER")
         
         # Add FPU flags for Cortex-M4/M7 with FPU
-        if specs.core.lower() in ['cortex-m4', 'cortex-m7'] and 'fpu' in specs.features:
+        if specs.core.lower() in ['cortex-m4', 'cortex-m7'] and ('fpu' in specs.features or 'FPU' in specs.features):
             flags.extend([
                 "-mfpu=fpv4-sp-d16",
                 "-mfloat-abi=hard"
             ])
         
         return ' '.join(flags)
+    
+    def _get_hse_value_for_part(self, part_number: str) -> str:
+        """Get the HSE crystal frequency for specific parts."""
+        part_upper = part_number.upper()
+        
+        # Most STM32 development boards use 8MHz crystal
+        # This can be overridden for specific known boards
+        if part_upper.startswith('STM32L432'):
+            return "8000000"  # 8MHz HSE for L432 series
+        elif part_upper.startswith('STM32F4'):
+            return "25000000"  # 25MHz HSE common for F4 series
+        elif part_upper.startswith('STM32H7'):
+            return "25000000"  # 25MHz HSE common for H7 series
+        else:
+            return "8000000"   # Default 8MHz
+    
+    def _get_jlink_device(self, part_number: str) -> str:
+        """Get the appropriate J-Link device name for the part."""
+        part_upper = part_number.upper()
+        
+        # For STM32L432KCU6, use the closest match
+        if part_upper == "STM32L432KCU6":
+            return "STM32L432KC"  # Closest J-Link supported variant
+        elif part_upper.startswith('STM32L432'):
+            return "STM32L432KC"  # Generic L432 J-Link device
+        else:
+            # For other parts, return the part number itself
+            return part_number
     
     def _get_product_line(self, part_number: str) -> str:
         """Extract product line from part number."""

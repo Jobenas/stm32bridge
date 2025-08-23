@@ -110,6 +110,35 @@ stm32bridge migrate my_cubemx_project my_pio_project --board my_custom_board --b
 stm32bridge migrate my_cubemx_project my_pio_project --board my_custom_board --board-file ./my_custom_board.json --build --open
 ```
 
+### Enhanced Board Generation for STM32L432KCU6
+
+STM32Bridge now includes specialized handling for STM32L432KCU6 and related variants:
+
+```bash
+# Generate enhanced STM32L432KCU6 board file
+stm32bridge generate-board agatha_fw_board --source "https://www.mouser.com/ProductDetail/STMicroelectronics/STM32L432KCU6?qs=..."
+```
+
+**Key Enhancements:**
+- **HSE_VALUE with "U" suffix**: Critical for proper HAL clock configuration
+- **Accurate memory sizes**: 256KB flash, 64KB RAM for KCU6 variant
+- **Proper debug configuration**: ST-Link and J-Link support
+- **Validated build flags**: Includes all necessary STM32L4 definitions
+
+**The generated board file will include:**
+```json
+{
+  "build": {
+    "extra_flags": "-DSTM32L432KCU6 -DSTM32L4 -DHSE_VALUE=8000000U -DUSE_HAL_DRIVER",
+    "f_cpu": "80000000L"
+  },
+  "debug": {
+    "jlink_device": "STM32L432KC",
+    "openocd_target": "stm32l4x"
+  }
+}
+```
+
 The `--board-file` parameter will automatically:
 - Copy the JSON file to the correct `boards/` directory in your PlatformIO project
 - Update the `platformio.ini` to use your custom board
