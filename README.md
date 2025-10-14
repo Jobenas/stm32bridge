@@ -15,7 +15,7 @@ pip install stm32bridge
 
 ### Development Installation
 ```bash
-git clone https://github.com/yourusername/stm32bridge.git
+git clone https://github.com/jobenas/stm32bridge.git
 cd stm32bridge
 pip install -e .
 
@@ -32,7 +32,7 @@ pip install -e .[build]    # Build tools
 ### From Local Wheel
 ```bash
 # Build and install from source
-git clone https://github.com/yourusername/stm32bridge.git
+git clone https://github.com/jobenas/stm32bridge.git
 cd stm32bridge
 pip install build
 python -m build
