@@ -143,11 +143,22 @@ dmypy.json
 *.ioc.bak
 *.tmp
 
-# Test directories
+# Test directories and files
 test_*/
 temp_*/
 *_test/
 *_temp/
+test_*.py
+test_*.json
+*_test.py
+demo_*.py
+fix_*.py
+verify_*.py
+
+# Development artifacts
+*.egg-info/
+dist/
+build/
 
 # OS generated files
 .DS_Store
